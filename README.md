@@ -1,6 +1,6 @@
 # Prism
 
-> **Code review intelligence learned from your team's PR history.**
+**Code review intelligence learned from your team's PR history.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
