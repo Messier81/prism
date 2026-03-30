@@ -5,8 +5,8 @@ Pure data pipeline — no LLM calls, no API keys. Semantic clustering
 and edge synthesis are done by the agent running /prism-init, not here.
 
 Usage:
-    python3 scrape.py --repo clio/clio-draft-backend --months 6
-    python3 scrape.py --repo clio/clio-draft-backend --months 3 --output .prism
+    python3 scrape.py --repo your-org/your-repo --months 6
+    python3 scrape.py --repo your-org/your-repo --months 3 --output .prism
 """
 
 import argparse
