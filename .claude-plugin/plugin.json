@@ -1,0 +1,8 @@
+{
+  "name": "prism",
+  "description": "Review intelligence learned from your team's PR history. Scrapes merged PRs, learns what your team actually cares about in reviews, and uses those patterns to review new PRs — surfacing what matters, hiding what doesn't.",
+  "author": {
+    "name": "Messier81",
+    "url": "https://github.com/Messier81/prism"
+  }
+}
