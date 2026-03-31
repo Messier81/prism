@@ -55,11 +55,13 @@ Write the merged comment pool back to `.prism/history/comments.json`.
 
 ## Step 5: Re-cluster Semantically
 
-With the combined comment pool, perform semantic clustering the same way `/prism-init` Step 3 does:
+With the combined comment pool, perform semantic clustering the same way `/prism-init` Step 3 does.
+
+**Before clustering**, perform follow-up PR detection on the merged review data (same process as `/prism-init` Step 3): scan for PRs that explicitly reference earlier PRs as follow-ups, comment promises of follow-up work, and same-author file overlap. Update `.prism/history/followups.json` with any new linkages. When computing action rates, treat comments addressed by follow-up PRs as acted on.
 
 1. Cluster all comments into 5-20 semantic themes
 2. For each cluster, produce: name, question, description
-3. Calculate action rates from `acted_on` fields
+3. Calculate action rates from `acted_on` fields (adjusted for follow-up reclassification)
 4. Build file triggers from paths
 
 **Preserve pattern IDs where possible**: if a new cluster matches an existing pattern by name (or high overlap in comments), keep the existing PAT-XXX id so calibration history remains connected.
@@ -98,4 +100,5 @@ Tell the user:
 - Any new patterns discovered
 - Any patterns dropped (no longer enough comments)
 - Edge changes
+- Any new follow-up PR relationships detected and comments reclassified (if any)
 - Suggest committing the updated files (including `feedback.jsonl` and `calibration.json`)

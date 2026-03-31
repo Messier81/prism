@@ -47,8 +47,9 @@ When a reviewer suggests something and the author ignores it consistently — th
 1. Gets the changed files and categorizes them (migration, API, frontend, etc.)
 2. Gets human review comments (filters out bots)
 3. Checks whether each comment was **acted on** (the code at that line changed in a later commit) or **dismissed** (ignored)
-4. Clusters comments semantically by category
-5. Computes **action rates** — how often the team actually applied each pattern
+4. Detects **follow-up PRs** — cases where the author addressed feedback in a separate PR rather than in-place — and reclassifies those dismissals as acted-on so action rates aren't falsely suppressed
+5. Clusters comments semantically by category
+6. Computes **action rates** — how often the team actually applied each pattern
 
 The result is `.prism/patterns.json`: review patterns with team-calibrated confidence scores.
 

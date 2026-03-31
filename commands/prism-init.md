@@ -48,9 +48,37 @@ The scraper outputs raw data in `.prism/history/`. Read ALL of these:
 - **`comments.json`** — all human review comments with `body`, `path`, `acted_on`
 - **`reverts.json`** — reverted PRs: what files/categories were involved, whether the original had review comments
 - **`safe_changes.json`** — change types that were approved without comments and never reverted
-- **`reviews.json`** — full PR data including `ci_checks` per PR
+- **`reviews.json`** — full PR data including `ci_checks`, `author`, `body`, `head_ref`, `files`, and `human_comments` per PR
 
 Also read `.prism/summary.json` for `ci_checks_available` (what CI already catches).
+
+### Follow-up PR Detection
+
+Before clustering, scan `reviews.json` for follow-up PRs — cases where the author addressed review feedback from an earlier PR in a separate PR rather than in-place.
+
+For each PR in `reviews.json`, check:
+1. **Explicit references**: Does the PR `body` or `title` reference another PR as a follow-up? (e.g. "follow-up to #123", "addresses feedback from #456", "splitting out the refactor from #789")
+2. **Comment promises**: In `comments.json`, are there comments on an earlier PR where the author responded with something like "I'll do this in a follow-up" or "will address separately"? If so, look for a later PR from the same `author` that touches overlapping files.
+3. **Same-author file overlap**: Same `author`, merged within 14 days, shares multiple files — especially if the earlier PR had dismissed comments on those files.
+
+For each detected follow-up link, write to `.prism/history/followups.json`:
+```json
+[
+  {
+    "followup_pr": 456,
+    "original_pr": 423,
+    "confidence": "high",
+    "signal": "body_reference",
+    "overlapping_files": ["src/api/views.py", "src/api/serializers.py"]
+  }
+]
+```
+
+**When computing action rates** for clusters, treat `comments.json` entries where:
+- `acted_on` is `false`
+- AND the comment's `path` is in `overlapping_files` for a detected follow-up on that PR
+
+...as **acted on**, since they were addressed in the follow-up PR. This prevents falsely suppressing patterns where feedback is routinely deferred.
 
 Now cluster the comments into 5-20 semantic themes based on WHAT they are about (not where the files are). For each cluster, produce:
 
@@ -126,7 +154,8 @@ Tell the user:
 3. How many patterns were extracted
 4. Which patterns have the highest confidence (team acts on them most)
 5. Which patterns are noise (team rarely acts on them)
-6. That they should commit `.prism/patterns.json`, `.prism/summary.json`, `.prism/calibration.json`, `.prism/feedback.jsonl`, and `.prism/PATTERNS.md`
-7. That `.prism/history/` is gitignored (raw scraped data stays local)
+6. How many follow-up PR relationships were detected and how many comments were reclassified (if any)
+7. That they should commit `.prism/patterns.json`, `.prism/summary.json`, `.prism/calibration.json`, `.prism/feedback.jsonl`, and `.prism/PATTERNS.md`
+8. That `.prism/history/` is gitignored (raw scraped data stays local)
 
 Suggest running `/prism-review <PR_NUMBER>` to try it on a recent PR.

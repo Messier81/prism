@@ -12,6 +12,7 @@ Usage:
 import argparse
 import json
 import math
+import re
 import random
 import subprocess
 import sys
@@ -19,6 +20,20 @@ from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 from fnmatch import fnmatch
 from pathlib import Path
+
+
+_FOLLOWUP_RE = re.compile(
+    r"follow[\s-]?up\s+(?:to|on|for)\s+#(\d+)", re.IGNORECASE
+)
+
+
+def _is_followup_reference(title: str, body: str, target_pr: int) -> bool:
+    """Check if a PR title/body explicitly references another PR as a follow-up."""
+    for text in (title, body):
+        for m in _FOLLOWUP_RE.finditer(text):
+            if int(m.group(1)) == target_pr:
+                return True
+    return False
 
 
 def gh(endpoint: str, paginate: bool = False) -> list | dict:
@@ -137,7 +152,7 @@ def _fetch_ci_status(repo: str, sha: str) -> list[dict]:
     ]
 
 
-def find_reverted_prs(repo: str, reviews: list[dict]) -> list[dict]:
+def find_reverted_prs(reviews: list[dict]) -> list[dict]:
     """Scan merged PRs for revert PRs and link them to the original."""
     reverts = []
     merged_by_number = {r["number"]: r for r in reviews}
@@ -148,7 +163,6 @@ def find_reverted_prs(repo: str, reviews: list[dict]) -> list[dict]:
             continue
 
         original_number = None
-        import re
         match = re.search(r"#(\d+)", title)
         if match:
             original_number = int(match.group(1))
@@ -342,6 +356,10 @@ def process_pr(repo: str, pr_summary: dict) -> dict | None:
     return {
         "number": pr_number,
         "title": pr_summary.get("title", ""),
+        "author": (pr_summary.get("user") or {}).get("login", ""),
+        "body": (details.get("body") or "")[:500],
+        "head_ref": (pr_summary.get("head") or {}).get("ref", ""),
+        "created_at": pr_summary.get("created_at", ""),
         "merged_at": details.get("merged_at", ""),
         "additions": details.get("additions", 0),
         "deletions": details.get("deletions", 0),
@@ -962,6 +980,27 @@ def cmd_track(args: argparse.Namespace) -> None:
                                 "weight_boost": 2.0,
                             }
                             update_calibration_file(prism_dir, revert_entry)
+                            new_implicit += 1
+                    break
+
+        # Check if a follow-up PR was merged that explicitly references this PR
+        if isinstance(search_results, list):
+            for candidate in search_results:
+                c_title = candidate.get("title", "")
+                c_body = candidate.get("body", "") or ""
+                if candidate.get("merged_at") and _is_followup_reference(c_title, c_body, pr_num):
+                    for finding in review_data["findings"]:
+                        if finding.get("action") == "dismiss":
+                            followup_entry = {
+                                "pattern_id": finding.get("pattern_id", ""),
+                                "pr": pr_num,
+                                "action": "confirm",
+                                "reason": f"follow-up PR #{candidate['number']} addressed this",
+                                "timestamp": now.isoformat(),
+                                "source": "implicit_followup",
+                                "weight_boost": 1.5,
+                            }
+                            update_calibration_file(prism_dir, followup_entry)
                             new_implicit += 1
                     break
 
